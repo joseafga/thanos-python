@@ -9,20 +9,24 @@ from gamepad import XboxController
 import serial
 import time
 
-ser = serial.Serial('/dev/pts/3', 9600)  # 10ms for read
+ser = serial.Serial('/dev/pts/4', 9600)  # 10ms for read
 Controller = XboxController()
 running = True
 
 
-def handle(event):
-    """ Handle controller events
-    every new events from controller will exec this function
+def callback(e):
+    """ Callback controller events
+    every new events from controller will call this function
     """
-    ser.write((event.code + " - " + str(event.state)).encode("UTF-8"))
-    print(event.code, event.state)
+    # concat event string and encode
+    send = "{},{}\n".format(e.code, e.state).encode('ascii', 'replace')
+    # send as serial
+    ser.write(send)
+    print('Out:', send)
 
 
 def serial_read():
+    """ Loop for Serial Read """
     global running
     readline = ""
 
@@ -32,18 +36,19 @@ def serial_read():
         read = ser.read()
         if read:
             if read == b"\n":
-                print(readline)
+                print('In:', readline)
                 readline = ""
             else:
-                readline += read.decode("UTF-8")
+                readline += read.decode('ascii')
 
 
 def serial_write():
+    """ Loop for Serial Write """
     global running
 
     while running:
         time.sleep(0.001)  # sleep 10ms
-        Controller.refresh_events(handle)
+        Controller.check_events(callback)
 
 
 # run serial read and write in parallel
