@@ -17,6 +17,7 @@ print_table(devices_paired)
 device = choose(devices_paired)
 btsock = do_connection(*device)
 Controller = XboxController()
+prev_event = None
 running = True
 
 
@@ -24,8 +25,17 @@ def callback(e):
     """ Callback controller events
     every new events from controller will call this function
     """
+    global prev_event  # previus event
+    event = (e.code, round(e.state, 2))  # current event
+
+    # prevent send same event after round
+    if prev_event == event:
+        return
+
+    # update prev event and continue to send via bluetooth
+    prev_event = event
     # concat event string and encode
-    send = "{},{}\n".format(e.code, round(e.state, 3)).encode('ascii')
+    send = "{},{}\n".format(event).encode('ascii')
     # send to bluetooth
     btsock.send(send)
     print('Out:', send)
