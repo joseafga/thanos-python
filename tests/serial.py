@@ -9,7 +9,7 @@ from gamepad import XboxController
 import serial
 import time
 
-ser = serial.Serial('/dev/pts/4', 9600)  # 10ms for read
+ser = serial.Serial('/dev/pts/4', 9600)
 Controller = XboxController()
 running = True
 

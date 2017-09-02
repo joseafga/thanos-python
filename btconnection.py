@@ -5,13 +5,13 @@ import bluetooth
 
 def find_devices():
     print('Looking for nearby devices...')
+    devices_list = []
 
-    return bluetooth.discover_devices(
-        duration=5,
-        lookup_names=True,
-        flush_cache=True,
-        lookup_class=False
-    )
+    devices = bluetooth.discover_devices(duration=5, lookup_names=True)
+    for d in devices:
+        devices_list.append(d + (1,))
+
+    return devices_list
 
 
 def find_services():
@@ -20,76 +20,63 @@ def find_services():
     services_list = []
 
     for s in services:
-        services_list.append((s['host'], str(s['name'])))
+        services_list.append((s['host'], str(s['name']), s['port']))
 
     return services_list
 
 
 def print_table(*args):
     # table header
-    print("\n{:2} {:18} {}".format('ID', 'ADDRESS', 'NAME'))
+    print("\n{:2} {:<18} {:<4} {}".format('ID', 'ADDRESS', 'PORT', 'NAME'))
 
     # create a table with all devices
     i = 0  # counter
 
     for devices in args:
         if len(devices):
-            for addr, name in devices:
+            for device in devices:
                 i += 1  # increment
-                try:
-                    print('{:2} {:18} {:}'.format(i, addr, name))
-                except UnicodeEncodeError:
-                    print('{:2} {:18} {:}'.format(
-                        i, addr, name.encode('utf-8', 'replace'))
-                    )
+                addr, name, port = device
+
+                print('{:>2} {:<18} {:<4} {}'.format(i, addr, port, name))
 
             print(' ------------------------------ ')  # separator
         else:
             print(' ----------- EMPTY ------------ ')
+    else:
+        print('{:2} Find Devices'.format(i + 1))
+        print('{:2} Find Services'.format(i + 2))
+        print(' ------------------------------ ')
 
 
-# start define devices
-devices_nearby = find_services()
-devices_paired = [
-    ('F8:E0:79:C2:C3:CE', 'Moto G'),
-    ('30:14:09:29:31:73', 'HC-06')
-]
+def choose(devices):
+    print("\nType device ID or action:", end=" ")
+    choice = int(input().lower())
 
-# show table with devices
-print_table(devices_paired, devices_nearby)
-# join lists
-devices = devices_paired + devices_nearby
+    diff = choice - len(devices)
 
-# selection of the device to connect
-print("\nType device ID to connect:", end=" ")
-choice = int(input().lower()) - 1
-addr = devices[choice][0]
-name = devices[choice][1]
-running = True
+    if diff > 0:
+        if diff == 1:
+            devices_nearby = find_devices()
+            print_table(devices_nearby)
+            return choose(devices_nearby)
+        else:
+            services_nearby = find_services()
+            print_table(services_nearby)
+            return choose(services_nearby)
 
-print("connecting to \"%s\" on %s" % (name, addr))
-exit()
+    return devices[choice - 1]
 
-# TODO
-# Create the client socket
-sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-sock.connect((addr, 1))
 
-print("connected.\n")
+def do_connection(addr, name, port):
+    # show message
+    print("Connecting to {} on {} port {}".format(name, addr, port))
 
-try:
-    while running:
-        data_recv = sock.recv(1024)
-        print("received [%s]" % data_recv)
+    # Create the client socket
+    sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+    sock.connect((addr, port))
 
-        data_send = input()
+    # connection ok
+    print("Connected.\n")
 
-        if data_send == "quit":
-            raise KeyboardInterrupt
-        sock.send(data_send.encode('ascii'))
-
-except (KeyboardInterrupt, EOFError):
-    # error rise or Ctrl+C is pressed
-    running = False
-    sock.close()
-    print("\nBye bye!")
+    return sock

@@ -69,16 +69,16 @@ class XboxController:
         # ABS_HAT0X, ABS_HAT0Y (directional)
         # BTN_NORTH (X), BTN_SOUTH (A), BTN_EAST (B), BTN_WEST (Y)
         resp = {
-            "ABS_X": Response("JSL_X", self._analog(event.state)),
-            "ABS_Y": Response("JSL_Y", self._analog(event.state)),
-            "ABS_Z": Response("JSL_Z", self._trigger(event.state)),
-            "ABS_RX": Response("JSR_X", self._analog(event.state)),
-            "ABS_RY": Response("JSR_Y", self._analog(event.state)),
-            "ABS_RZ": Response("JSR_Z", self._trigger(event.state)),
-            "BTN_NORTH": Response("BTN_X", self._button(event.state)),
-            "BTN_SOUTH": Response("BTN_A", self._button(event.state)),
-            "BTN_EAST": Response("BTN_B", self._button(event.state)),
-            "BTN_WEST": Response("BTN_Y", self._button(event.state)),
+            "ABS_X": Response("L_X", self._analog(event.state)),
+            "ABS_Y": Response("L_Y", self._analog(event.state)),
+            "ABS_Z": Response("L_Z", self._trigger(event.state)),
+            "ABS_RX": Response("R_X", self._analog(event.state)),
+            "ABS_RY": Response("R_Y", self._analog(event.state)),
+            "ABS_RZ": Response("R_Z", self._trigger(event.state)),
+            "BTN_NORTH": Response("B_X", self._button(event.state)),
+            "BTN_SOUTH": Response("B_A", self._button(event.state)),
+            "BTN_EAST": Response("B_B", self._button(event.state)),
+            "BTN_WEST": Response("B_Y", self._button(event.state)),
         }.get(event.code, Response(event.code, self._button(event.state)))
 
         resp.state *= scale
