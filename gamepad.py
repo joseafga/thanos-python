@@ -12,7 +12,7 @@ class XboxController:
     deadzone = 0.3 * max_analog
     prev = {}
 
-    def check_events(self, callback=False):
+    def check_events(self, callback=False, ndigits=3):
         """ Check for new events
         if a new event is found handle method will be executed
         """
@@ -22,7 +22,7 @@ class XboxController:
             if event.code == "SYN_REPORT":
                 continue
 
-            resp = self.translate(event)
+            resp = round(self.translate(event), ndigits)
 
             # prevent repetitive outputs
             if self.prev.get(resp.code) == resp.state:
