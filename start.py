@@ -8,7 +8,7 @@ import time
 # define paired devices
 devices_paired = [
     ('F8:E0:79:C2:C3:CE', 'Moto G', 1),
-    ('F8:E0:79:C2:C3:CE', 'Moto G', 8),
+    ('F8:E0:79:C2:C3:CE', 'Moto G', 6),
     ('30:14:09:29:31:73', 'HC-06', 1)
 ]
 # show table with devices
@@ -25,7 +25,7 @@ def callback(e):
     every new events from controller will call this function
     """
     # concat event string and encode
-    send = "{},{}\n".format(event).encode('ascii')
+    send = "{},{}\n".format(e.state, e.code).encode('ascii')
     # send to bluetooth
     btsock.send(send)
     print('Out:', send)
@@ -44,7 +44,7 @@ def sock_write():
     """ Loop for Bluetooth Write """
     while running:
         time.sleep(0.002)  # sleep 2ms
-        Controller.check_events(callback)
+        Controller.check_events(callback, scale=1, ndigits=2)
 
 
 # run bluetooth read and write in parallel

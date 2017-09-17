@@ -12,7 +12,7 @@ class XboxController:
     deadzone = 0.3 * max_analog
     prev = {}
 
-    def check_events(self, callback=False, ndigits=3):
+    def check_events(self, callback=False, **kwargs):
         """ Check for new events
         if a new event is found handle method will be executed
         """
@@ -22,7 +22,7 @@ class XboxController:
             if event.code == "SYN_REPORT":
                 continue
 
-            resp = round(self.translate(event), ndigits)
+            resp = self.translate(event, **kwargs)
 
             # prevent repetitive outputs
             if self.prev.get(resp.code) == resp.state:
@@ -56,7 +56,7 @@ class XboxController:
     def _button(self, state):
         return state
 
-    def translate(self, event, scale=1):
+    def translate(self, event, scale=1, ndigits=3):
 
         class Response:
             def __init__(self, code, state):
@@ -80,7 +80,9 @@ class XboxController:
             "BTN_EAST": Response("B_B", self._button(event.state)),
             "BTN_WEST": Response("B_Y", self._button(event.state)),
         }.get(event.code, Response(event.code, self._button(event.state)))
+        # TODO: remove default response to not send unimplemented keys
 
         resp.state *= scale
+        resp.state = round(resp.state, ndigits)
 
         return resp
