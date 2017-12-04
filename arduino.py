@@ -41,10 +41,10 @@ class Bluetooth:
 
 class XduinoController(gamepad.XboxController):
     # right and left ratio
-    # use for a side turn more or less .. can reduce total turn too
+    # use for a side turn more or less than other ... never more than 1 (use scale for that)
     rratio = 1
     lratio = 1
-    # motors scale
+    # motors scales ... the maximum number passed
     m1scale = 1023
     m2scale = 1023
 
@@ -57,34 +57,36 @@ class XduinoController(gamepad.XboxController):
 
     def command(self, event):
         """  This will translate controller event to Arduino command """
-        if event.code in ["LZ", "RZ", "LX"]:
-            # rewrite event for accelerate and turn
-            m1 = m2 = round(self.prev.get("RZ", 0) - self.prev.get("LZ", 0), self.ndigits)
-            turn = self.prev.get("LX", 0)
-            if (turn > 0):  # right
-                m1 *= (1 - turn * self.rratio)
-            elif (turn < 0):  # left
-                m2 *= (1 - abs(turn) * self.lratio)
+        if event.code in ["LZ", "RZ", "LX", "DX"]:
+            # motor events
+            if event.code in ["LZ", "RZ", "LX"]:
+                # store event for future use
+                self.prev[event.code] = event.state
 
-            state = str(round(m1 * self.m1scale)) + "," + str(round(m2 * self.m2scale))
+                # rewrite event for accelerate and turn
+                m1 = m2 = round(self.prev.get("RZ", 0) - self.prev.get("LZ", 0), self.ndigits)
+                turn = self.prev.get("LX", 0)
+                if (turn > 0):  # right
+                    m2 *= (1 - turn * self.rratio)
+                elif (turn < 0):  # left
+                    m1 *= (1 - abs(turn) * self.lratio)
 
-            event.code = "MP"
-            event.state = state
+            elif event.code == "DX":
+                # turn on self axis
+                m1 = event.state
+                m2 = event.state * -1
 
-        elif event.code == "DX":
-            # turn on self axis
-            m1 = event.state
-            m2 = event.state * -1
+            # fix scale, round number and pass it to event var
             state = str(round(m1 * self.m1scale)) + "," + str(round(m2 * self.m2scale))
 
             event.code = "MP"
             event.state = state
 
         elif event.code in ["BM"]:
-            ...
+            ...  # TODO
 
         else:
-            # useless event, just skip
-            return event
+            # skip unimplemented codes
+            event.code, event.state = "NIL", 0
 
         return event

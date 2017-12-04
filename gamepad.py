@@ -5,6 +5,7 @@ import inputs
 
 class XboxController:
     """ Xbox One Controller interface """
+    gamepad = None
 
     # def __init__(self):
     max_analog = 32768
@@ -17,11 +18,24 @@ class XboxController:
     # format options
     ndigits = 3
 
+    def sync(self):
+        devices = inputs.DeviceManager()
+        self.gamepad = next((x for x in devices.gamepads if "Microsoft X-Box" in x.name), None)
+
+        if self.gamepad is None:
+            return False
+
+        return True
+
     def check_events(self, callback=False, **kwargs):
         """ Check for new events
         if a new event is found handle method will be executed
         """
-        events = inputs.get_gamepad()
+        try:
+            events = self.gamepad.read()
+        except Exception:
+            raise self.sync()
+
         for event in events:
             # convert xbox controller event to something more usable
             resp = self.translate(event, **kwargs)

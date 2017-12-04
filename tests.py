@@ -15,9 +15,21 @@ devices_paired = [
 # global variables
 running = False  # control if infinite loops is running
 Controller = None  # gamepad
-# variables processes
-p1 = None
-p2 = None
+
+# show table with devices
+print_table(devices_paired)
+
+# device = choose(devices_paired)
+# btsock = do_connection(*device)
+# ArduinoBT = arduino.Bluetooth(device)  # create connection
+
+# controller
+Controller = arduino.XduinoController()  # convert xbox controller events in arduino commands
+Controller.ndigits = 2
+Controller.lratio = 0.5
+Controller.rratio = 0.8
+Controller.m1scale = 255
+Controller.m2scale = 255
 
 
 def callback(e):
@@ -44,46 +56,41 @@ def sock_transmit():
         Controller.check_events(callback)
 
 
-try:
-    # show table with devices
-    print_table(devices_paired)
+def start():
+    global running, controller
+    # variables processes
+    p1 = None
+    p2 = None
 
-    # device = choose(devices_paired)
-    # btsock = do_connection(*device)
-    # ArduinoBT = arduino.Bluetooth(device)  # create connection
+    try:
+        print("\nReadyyyy...")  # start preparations
 
-    # controller
-    Controller = arduino.XduinoController()  # convert xbox controller events in arduino commands
-    Controller.ndigits = 2
-    Controller.lratio = 0.5
-    Controller.rratio = 0.8
-    Controller.m1scale = 255
-    Controller.m2scale = 255
+        while not Controller.sync():
+            print("No controller, resync ...")
+            time.sleep(3)  # sleep waiting connection
 
-    print("\nReadyyyyyyy...")
-    time.sleep(1)  # wait some seconds to estabilize connection
-    print("Gooo!")
+        running = True
 
-    running = True
-    # run bluetooth read and write in parallel
-    p1 = Process(target=sock_transmit)
-    # p2 = Process(target=sock_receive)
-    # start processes
-    p1.start()
-    # self.p2.start()
-    # stop code util all processes are finish
-    p1.join()
-    # self.p2.join()
+        # run bluetooth read and write in parallel
+        p1 = Process(target=sock_transmit)
+        # p2 = Process(target=sock_receive)
+        # start processes
+        p1.start()
+        # self.p2.start()
+        time.sleep(1)  # wait some seconds to estabilize connection
+        print("Gooo!")  # all done
 
-except OSError:
-    # controller disconnect
-    print("Connection lost. Reconnecting ...")
-    time.sleep(3)  # sleep waiting connection
+        # stop code util all processes are finish
+        p1.join()
+        # self.p2.join()
 
-except (KeyboardInterrupt, EOFError):
-    # error rise or Ctrl+C is pressed
-    running = False
-    p1.terminate()
-    # self.p2.terminate()
-    print("\nBye bye!")
-    exit()
+    except (KeyboardInterrupt, EOFError):
+        # error rise or Ctrl+C is pressed
+        running = False
+        p1.terminate()
+        # self.p2.terminate()
+        print("\nBye bye!")
+        exit()
+
+
+start()
