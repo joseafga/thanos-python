@@ -51,10 +51,9 @@ class XduinoController(gamepad.XboxController):
     def __init__(self, *args, **kwargs):
         super(XduinoController, self).__init__(*args, **kwargs)
 
-    def translate(self, callback=False, *args, **kwargs):
-        self.prev_callback = callback  # store previous callback
-        # call parent method with new callback
-        super(XduinoController, self).check_events(callback=self.command, *args, **kwargs)
+    def translate(self, event, **kwargs):
+        # call parent method
+        return self.command(super(XduinoController, self).translate(event, **kwargs))
 
     def command(self, event):
         """  This will translate controller event to Arduino command """
@@ -86,14 +85,6 @@ class XduinoController(gamepad.XboxController):
 
         else:
             # useless event, just skip
-            return
+            return event
 
-        # check if prev event is the same
-        if self.prev.get(event.code) == event.state:
-            return
-        self.prev[event.code] = event.state
-
-        # call previous callback if it exists
-        if callable(self.prev_callback):
-            self.prev_callback(event)
-            self.prev_callback = None  # clean after exec
+        return event
