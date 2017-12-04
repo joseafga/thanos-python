@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-from multiprocessing import Process
-from gamepad import XboxController
+import arduino
 from btconnection import *
 import time
 
@@ -15,9 +14,19 @@ devices_paired = [
 print_table(devices_paired)
 
 device = choose(devices_paired)
-btsock = do_connection(*device)
-Controller = XboxController()
-running = True
+running = False
+# btsock = do_connection(*device)
+ArduinoBT = arduino.Bluetooth(device)  # create connection
+Controller = arduino.XduinoController()  # convert xbox controller events in arduino commands
+Controller.ndigits = 2
+Controller.lratio = 1
+Controller.rratio = 1
+Controller.m1scale = 255
+Controller.m2scale = 255
+
+print("\nReadyyyyyyy...")
+time.sleep(1)  # wait some seconds to estabilize connection
+print("Gooo!")
 
 
 def callback(e):
@@ -25,43 +34,32 @@ def callback(e):
     every new events from controller will call this function
     """
     # concat event string and encode
-    send = "{},{}\n".format(e.state, e.code).encode('ascii')
+    send = "<{},{}>".format(e.code, e.state).encode('ascii')
     # send to bluetooth
-    btsock.send(send)
-    print('Out:', send)
+    ArduinoBT.tx(send)
 
 
-def sock_read():
+def sock_receive():
     """ Loop for Bluetooth Read """
     while running:
         time.sleep(0.1)  # sleep 100ms
-
-        read = btsock.recv(1024)
-        print('In:', read)
+        ArduinoBT.rx()
 
 
-def sock_write():
+def sock_transmit():
     """ Loop for Bluetooth Write """
     while running:
         time.sleep(0.002)  # sleep 2ms
-        Controller.check_events(callback, scale=1, ndigits=2)
+        Controller.check_events(callback)
 
 
-# run bluetooth read and write in parallel
 try:
-    p1 = Process(target=sock_read)
-    p2 = Process(target=sock_write)
-    # start processes
-    p1.start()
-    p2.start()
-    # stop code util all processes are finish
-    p1.join()
-    p2.join()
+    # run bluetooth read and write in parallel
+    running = True
+    ArduinoBT.start(sock_receive, sock_transmit)
 
 except (KeyboardInterrupt, EOFError):
     # error rise or Ctrl+C is pressed
     running = False
-    btsock.close()
-    p1.terminate()
-    p2.terminate()
+    ArduinoBT.stop()
     print("\nBye bye!")

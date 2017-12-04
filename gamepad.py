@@ -10,7 +10,12 @@ class XboxController:
     max_analog = 32768
     max_trigger = 1023
     deadzone = 0.3 * max_analog
-    prev = {}
+    prev = {
+        "NIL": 0  # useless event
+    }
+
+    # format options
+    ndigits = 3
 
     def check_events(self, callback=False, **kwargs):
         """ Check for new events
@@ -18,19 +23,22 @@ class XboxController:
         """
         events = inputs.get_gamepad()
         for event in events:
-            # skip if event is SYN_REPORT
-            if event.code == "SYN_REPORT":
-                continue
-
+            # convert xbox controller event to something more usable
             resp = self.translate(event, **kwargs)
 
-            # prevent repetitive outputs
+            # prevent and repetitive outputs
             if self.prev.get(resp.code) == resp.state:
                 continue
             self.prev[resp.code] = resp.state
 
             if callable(callback):
                 callback(resp)
+
+    def response(self, event, code, state_fn):
+        event.code = code
+        event.state = round(state_fn(event.state), self.ndigits)
+
+        return event
 
     def fix_deadzone(self, state):
         """ Exclude deadzone value from state """
@@ -56,33 +64,30 @@ class XboxController:
     def _button(self, state):
         return state
 
-    def translate(self, event, scale=1, ndigits=3):
-
-        class Response:
-            def __init__(self, code, state):
-                self.code = code
-                self.state = state
-
+    def translate(self, event, **kwargs):
         # ABS_X, ABS_Y (analog), ABS_RX, ABS_RY (analog)
         # ABS_Z, ABS_RZ (trigger)
         # BTN_TL, BTN_TR (Top buttons)
         # ABS_HAT0X, ABS_HAT0Y (directional)
         # BTN_NORTH (X), BTN_SOUTH (A), BTN_EAST (B), BTN_WEST (Y)
-        resp = {
-            "ABS_X": Response("L_X", self._analog(event.state)),
-            "ABS_Y": Response("L_Y", self._analog(event.state)),
-            "ABS_Z": Response("L_Z", self._trigger(event.state)),
-            "ABS_RX": Response("R_X", self._analog(event.state)),
-            "ABS_RY": Response("R_Y", self._analog(event.state)),
-            "ABS_RZ": Response("R_Z", self._trigger(event.state)),
-            "BTN_NORTH": Response("B_X", self._button(event.state)),
-            "BTN_SOUTH": Response("B_A", self._button(event.state)),
-            "BTN_EAST": Response("B_B", self._button(event.state)),
-            "BTN_WEST": Response("B_Y", self._button(event.state)),
-        }.get(event.code, Response(event.code, self._button(event.state)))
-        # TODO: remove default response to not send unimplemented keys
+        # SYN_REPORT
+        #
+        # TODO translate all what you need
+        out = {
+            "ABS_X": ("LX", self._analog),
+            # ABS_Y": ("LY", self._analog),
+            "ABS_Z": ("LZ", self._trigger),
+            # "ABS_RX": ("RX", self._analog),
+            # "ABS_RY": ("RY", self._analog),
+            "ABS_RZ": ("RZ", self._trigger),
+            # "BTN_NORTH": ("BX", self._button),
+            # "BTN_SOUTH": ("BA", self._button),
+            # "BTN_EAST": ("BB", self._button),
+            # "BTN_WEST": ("BY", self._button),
+            "BTN_MODE": ("BM", self._button),
+            "ABS_HAT0X": ("DX", self._button),
+        }.get(event.code, (event.code, self._button))
+        # .get(event.code, ("NL") ... show only necessary
+        # .get(event.code, (event.code, self._button))  ... show all events
 
-        resp.state *= scale
-        resp.state = round(resp.state, ndigits)
-
-        return resp
+        return self.response(event, *out)
