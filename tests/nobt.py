@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import arduino
+from multiprocessing import Process
 from btconnection import *
 import time
 
@@ -47,14 +48,17 @@ def callback(e):
     # concat event string and encode
     send = "<{},{}>".format(e.code, e.state).encode('ascii')
     # send to bluetooth
-    ArduinoBT.tx(send)
+    print('Out:', send)  # ArduinoBT.tx(send)
 
 
 def sock_receive():
     """ Loop for Bluetooth Read """
-    while running:
-        time.sleep(0.1)  # sleep 100ms
-        ArduinoBT.rx()
+    try:
+        while running:
+            time.sleep(0.1)  # sleep 100ms
+            # nem vai funcionar sem BT # ArduinoBT.rx()
+    except Exception as e:
+        print("Deu bosta ...", e)
 
 
 def sock_transmit():
@@ -71,21 +75,29 @@ def sock_transmit():
 try:
     # show table with devices
     print_table(devices_paired)
-    device = choose(devices_paired)
+    # device = choose(devices_paired)
     # btsock = do_connection(*device)
-    ArduinoBT = arduino.Bluetooth(device)  # create connection
+    # ArduinoBT = arduino.Bluetooth(device)  # create connection
 
-    # start preparations
-    print("\nPreparing...")
-    controller_sync("synchronizing controller ...")
+    print("\nPreparing...")  # start preparations
+    controller_sync("Synchronizing controller")
     running = True
     print("Gooo!")  # all done
 
     # run bluetooth read and write in parallel
-    ArduinoBT.start(sock_receive, sock_transmit)
+    p1 = Process(target=sock_transmit)
+    # p2 = Process(target=sock_receive)
+    # start processes
+    p1.start()
+    # p2.start()
+    # stop code util all processes are finish
+    p1.join()
+    # p2.join()
 
 except (KeyboardInterrupt, EOFError):
     # error rise or Ctrl+C is pressed
     running = False
-    ArduinoBT.stop()
+    p1.terminate()
+    # p2.terminate()
     print("\nBye bye!")
+    exit()
