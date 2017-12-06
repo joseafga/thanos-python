@@ -1,42 +1,63 @@
 #!/usr/bin/env python
 
-from multiprocessing import Process
+from multiprocessing import Process, Queue
 from btconnection import *
 import gamepad
 
 
 class Bluetooth:
     btsock = None
+    device = None
+    connected = False
 
     def __init__(self, device):
         self.btsock = do_connection(*device)
+        # store connected device
+        self.device = device
+        self.connected = True
+
+    def reconnect(self):
+        self.btsock = do_connection(*self.device)
+        self.connected = True
+
+    def disconnect(self):
+        self.btsock.close()
+        self.connected = False
 
     def rx(self):
+        # read data from BT sock
         read = self.btsock.recv(1024)
         print('In:', read)
 
         return read
 
     def tx(self, data):
+        # send data via BT sock
         self.btsock.send(data)
         print('Out:', data)
 
         return True
 
-    def start(self, receive, transmit):
-        self.p1 = Process(target=receive)
-        self.p2 = Process(target=transmit)
-        # start processes
-        self.p1.start()
-        self.p2.start()
-        # stop code util all processes are finish
-        self.p1.join()
-        self.p2.join()
+    def get_errors(self):
+        # return errors from queue
+        return self.queue.get()
+
+    def start(self, fx):
+        # queue used to pass errors
+        self.queue = Queue()
+        # store all processes started
+        self.processes = []
+        # create and start processes
+        for f in fx:
+            p = Process(target=f, args=(self.queue,))
+            self.processes.append(p)
+            p.start()
 
     def stop(self):
-        self.btsock.close()
-        self.p1.terminate()
-        self.p2.terminate()
+        # disconect from sock and terminate processes
+        self.disconnect()
+        for p in self.processes:
+            p.terminate()
 
 
 class XduinoController(gamepad.XboxController):

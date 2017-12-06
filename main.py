@@ -1,17 +1,19 @@
 #!/usr/bin/env python
 
-import arduino
+from time import sleep
 from btconnection import *
-import time
+import arduino
 
 # define paired devices
 devices_paired = [
-    ('F8:E0:79:C2:C3:CE', 'Moto G', 1),
+    ('F8:E0:79:C2:C3:CE', 'Moto G', 8),
+    ('F8:E0:79:C2:C3:CE', 'Moto G', 7),
     ('F8:E0:79:C2:C3:CE', 'Moto G', 6),
     ('30:14:09:29:31:73', 'HC-06', 1)
 ]
 # some options
-WAIT_TIME = 1
+WAIT_TIME = 5
+AUTO_RECONNECT = 1
 # global variables
 running = False  # control if infinite loops is running
 # variables processes
@@ -32,12 +34,24 @@ def controller_sync(msg):
 
     while True:
         print(".", end='', flush=True)  # print new . for every attempt
-        time.sleep(WAIT_TIME)  # sleep waiting connection
+        sleep(WAIT_TIME)  # sleep waiting connection
 
         # if sync ok break loop
         if Controller.sync():
             print(" Done.")
             break
+
+
+def bluetooth_sync():
+    if not AUTO_RECONNECT:
+        return
+
+    try:
+        sleep(WAIT_TIME)  # sleep waiting connection
+        arduinoBT.reconnect()
+    except Exception as e:
+        print("Can't connect ... trying again")
+        bluetooth_sync()
 
 
 def callback(e):
@@ -47,45 +61,69 @@ def callback(e):
     # concat event string and encode
     send = "<{},{}>".format(e.code, e.state).encode('ascii')
     # send to bluetooth
-    ArduinoBT.tx(send)
+    arduinoBT.tx(send)
 
 
-def sock_receive():
+def sock_receive(q):
     """ Loop for Bluetooth Read """
-    while running:
-        time.sleep(0.1)  # sleep 100ms
-        ArduinoBT.rx()
+    try:
+        while running:
+            sleep(0.5)  # sleep 500ms
+            arduinoBT.rx()
+
+    except bluetooth.btcommon.BluetoothError as e:
+        q.put("Bluetooth receive error.")
+        pass
+
+    except Exception as e:
+        print("Generic error on receive")
+        for x in e.args:
+            print("error: ", x)
 
 
-def sock_transmit():
+def sock_transmit(q):
     """ Loop for Bluetooth Write """
     try:
         while running:
-            time.sleep(0.002)  # sleep 2ms
+            sleep(0.002)  # sleep 2ms
             Controller.check_events(callback)
-    except (OSError, FileNotFoundError) as e:
+
+    except FileNotFoundError as e:
         controller_sync("Lost controller, resynchronizing")
         sock_transmit()  # back to process
+
+    except bluetooth.btcommon.BluetoothError as e:
+        q.put("Bluetooth transmit error.")
+
+    except Exception as e:
+        print("Generic error on transmit")
+        for x in e.args:
+            print("error: ", x)
 
 
 try:
     # show table with devices
     print_table(devices_paired)
     device = choose(devices_paired)
-    # btsock = do_connection(*device)
-    ArduinoBT = arduino.Bluetooth(device)  # create connection
-
     # start preparations
     print("\nPreparing...")
-    controller_sync("synchronizing controller ...")
+    # create bluetooth connection
+    arduinoBT = arduino.Bluetooth(device)
+    # xbox controller
+    controller_sync("synchronizing controller")
     running = True
     print("Gooo!")  # all done
 
-    # run bluetooth read and write in parallel
-    ArduinoBT.start(sock_receive, sock_transmit)
+    # run bluetooth processes
+    while running:
+        # create processes to read and write in parallel
+        arduinoBT.start((sock_receive, sock_transmit))
+        print(arduinoBT.get_errors(), "Reconnecting ...")  # wait for error
+        arduinoBT.stop()
+        bluetooth_sync()
 
 except (KeyboardInterrupt, EOFError):
     # error rise or Ctrl+C is pressed
     running = False
-    ArduinoBT.stop()
+    arduinoBT.stop()
     print("\nBye bye!")
