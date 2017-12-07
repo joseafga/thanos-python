@@ -31,10 +31,7 @@ class XboxController:
         """ Check for new events
         if a new event is found handle method will be executed
         """
-        try:
-            events = self.gamepad.read()
-        except Exception:
-            raise self.sync()
+        events = self.gamepad.read()
 
         for event in events:
             # convert xbox controller event to something more usable

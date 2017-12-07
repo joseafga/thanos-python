@@ -3,26 +3,47 @@
 from multiprocessing import Process, Queue
 from btconnection import *
 import gamepad
+import signal
 
 
 class Bluetooth:
     btsock = None
+    timeout = 10
+    countdown = 1
     device = None
     connected = False
+    prev = b'<MP,0,0>'  # start with some command
 
     def __init__(self, device):
-        self.btsock = do_connection(*device)
         # store connected device
         self.device = device
-        self.connected = True
 
-    def reconnect(self):
+    def connect(self):
         self.btsock = do_connection(*self.device)
+        if self.timeout > 0:
+            self.btsock.settimeout(self.timeout)
         self.connected = True
 
+    # close bluetooth sock connection
     def disconnect(self):
         self.btsock.close()
         self.connected = False
+
+    # signal handler
+    def _countdown(self, *args, **kwargs):
+        self.tx(self.prev)
+        self.reset_countdown()
+
+    # initialize signal countdown
+    def begin_countdown(self):
+        signal.signal(signal.SIGALRM, self._countdown)
+        self.reset_countdown()
+
+    def reset_countdown(self):
+        signal.alarm(self.countdown)
+
+    def finish_countdown(self):
+        signal.alarm(0)
 
     def rx(self):
         # read data from BT sock
@@ -35,6 +56,9 @@ class Bluetooth:
         # send data via BT sock
         self.btsock.send(data)
         print('Out:', data)
+        # store data sended data to use in countdown
+        self.prev = data
+        self.reset_countdown()
 
         return True
 

@@ -12,7 +12,7 @@ devices_paired = [
     ('30:14:09:29:31:73', 'HC-06', 1)
 ]
 # some options
-WAIT_TIME = 5
+WAIT_TIME = 2
 AUTO_RECONNECT = 1
 # global variables
 running = False  # control if infinite loops is running
@@ -22,10 +22,17 @@ p2 = None
 # controller and their options
 Controller = arduino.XduinoController()  # convert xbox controller events in arduino commands
 Controller.ndigits = 2
-Controller.lratio = 1
-Controller.rratio = 1
+Controller.lratio = .8
+Controller.rratio = .75
 Controller.m1scale = 255
 Controller.m2scale = 255
+# show table with devices
+print_table(devices_paired)
+device = choose(devices_paired)
+arduinoBT = arduino.Bluetooth(device)  # create bluetooth object with device
+# bluetooth options
+arduinoBT.timeout = 0
+arduinoBT.countdown = 1
 
 
 def controller_sync(msg):
@@ -48,7 +55,7 @@ def bluetooth_sync():
 
     try:
         sleep(WAIT_TIME)  # sleep waiting connection
-        arduinoBT.reconnect()
+        arduinoBT.connect()
     except Exception as e:
         print("Can't connect ... trying again")
         bluetooth_sync()
@@ -68,12 +75,14 @@ def sock_receive(q):
     """ Loop for Bluetooth Read """
     try:
         while running:
-            sleep(0.5)  # sleep 500ms
+            sleep(0.1)  # sleep 100ms
             arduinoBT.rx()
 
     except bluetooth.btcommon.BluetoothError as e:
+        if e.args[0] == "timed out":
+            print("Timeout error. ", end='', flush=True)
+
         q.put("Bluetooth receive error.")
-        pass
 
     except Exception as e:
         print("Generic error on receive")
@@ -84,46 +93,40 @@ def sock_receive(q):
 def sock_transmit(q):
     """ Loop for Bluetooth Write """
     try:
+        arduinoBT.begin_countdown()
         while running:
             sleep(0.002)  # sleep 2ms
             Controller.check_events(callback)
 
-    except FileNotFoundError as e:
+    except (FileNotFoundError, OSError) as e:
+        # stop countdown will stop connection while controller reconnect
+        arduinoBT.finish_countdown()
         controller_sync("Lost controller, resynchronizing")
-        sock_transmit()  # back to process
+        sock_transmit(q)  # back to process
 
     except bluetooth.btcommon.BluetoothError as e:
         q.put("Bluetooth transmit error.")
 
-    except Exception as e:
-        print("Generic error on transmit")
-        for x in e.args:
-            print("error: ", x)
 
+if __name__ == '__main__':
+    try:
+        # start preparations
+        print("\nPreparing...")
+        bluetooth_sync()  # create bluetooth connection
+        controller_sync("synchronizing controller")  # xbox controller connection
+        running = True
+        print("Gooo!")  # all done
 
-try:
-    # show table with devices
-    print_table(devices_paired)
-    device = choose(devices_paired)
-    # start preparations
-    print("\nPreparing...")
-    # create bluetooth connection
-    arduinoBT = arduino.Bluetooth(device)
-    # xbox controller
-    controller_sync("synchronizing controller")
-    running = True
-    print("Gooo!")  # all done
+        # run bluetooth processes
+        while running:
+            # create processes to read and write in parallel
+            arduinoBT.start((sock_receive, sock_transmit))
+            print(arduinoBT.get_errors(), "Reconnecting ...")  # wait for error
+            arduinoBT.stop()
+            bluetooth_sync()
 
-    # run bluetooth processes
-    while running:
-        # create processes to read and write in parallel
-        arduinoBT.start((sock_receive, sock_transmit))
-        print(arduinoBT.get_errors(), "Reconnecting ...")  # wait for error
+    except (KeyboardInterrupt, EOFError):
+        # error rise or Ctrl+C is pressed
+        running = False
         arduinoBT.stop()
-        bluetooth_sync()
-
-except (KeyboardInterrupt, EOFError):
-    # error rise or Ctrl+C is pressed
-    running = False
-    arduinoBT.stop()
-    print("\nBye bye!")
+        print("\nBye bye!")
