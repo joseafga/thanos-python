@@ -91,7 +91,7 @@ class XboxController:
             # "ABS_RX": ("RX", self._analog),
             # "ABS_RY": ("RY", self._analog),
             "ABS_RZ": ("RZ", self._trigger),
-            # "BTN_NORTH": ("BX", self._button),
+            "BTN_NORTH": ("BX", self._button),
             # "BTN_SOUTH": ("BA", self._button),
             # "BTN_EAST": ("BB", self._button),
             # "BTN_WEST": ("BY", self._button),

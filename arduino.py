@@ -12,7 +12,7 @@ class Bluetooth:
     countdown = 1
     device = None
     connected = False
-    prev = b'<MP,0,0>'  # start with some command
+    prev = b'<M,0,0>'  # start with some command
 
     def __init__(self, device):
         # store connected device
@@ -27,6 +27,7 @@ class Bluetooth:
     # close bluetooth sock connection
     def disconnect(self):
         self.btsock.close()
+        self.finish_countdown()
         self.connected = False
 
     # signal handler
@@ -47,8 +48,8 @@ class Bluetooth:
 
     def rx(self):
         # read data from BT sock
-        read = self.btsock.recv(1024)
-        print('In:', read)
+        read = self.btsock.recv(2048)
+        print('In:', read.decode())
 
         return read
 
@@ -124,11 +125,16 @@ class XduinoController(gamepad.XboxController):
             # fix scale, round number and pass it to event var
             state = str(round(m1 * self.m1scale)) + "," + str(round(m2 * self.m2scale))
 
-            event.code = "MP"
+            event.code = "M"
             event.state = state
 
         elif event.code in ["BM"]:
             ...  # TODO
+            event.code = "C"
+
+        elif event.code in ["BX"]:
+            ...  # TODO
+            event.code = "X"
 
         else:
             # skip unimplemented codes

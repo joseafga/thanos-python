@@ -32,7 +32,7 @@ device = choose(devices_paired)
 arduinoBT = arduino.Bluetooth(device)  # create bluetooth object with device
 # bluetooth options
 arduinoBT.timeout = 0
-arduinoBT.countdown = 1
+arduinoBT.countdown = 2
 
 
 def controller_sync(msg):
