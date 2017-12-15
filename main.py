@@ -22,8 +22,8 @@ p2 = None
 # controller and their options
 Controller = arduino.XduinoController()  # convert xbox controller events in arduino commands
 Controller.ndigits = 2
-Controller.lratio = .8
-Controller.rratio = .75
+Controller.lratio = 1
+Controller.rratio = 1
 Controller.m1scale = 255
 Controller.m2scale = 255
 # show table with devices

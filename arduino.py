@@ -49,7 +49,7 @@ class Bluetooth:
     def rx(self):
         # read data from BT sock
         read = self.btsock.recv(2048)
-        print('In:', read.decode())
+        print("In:", read)
 
         return read
 
@@ -123,7 +123,7 @@ class XduinoController(gamepad.XboxController):
                 m2 = event.state * -1
 
             # fix scale, round number and pass it to event var
-            state = str(round(m1 * self.m1scale)) + "," + str(round(m2 * self.m2scale))
+            state = str(round(m2 * self.m2scale)) + "," + str(round(m1 * self.m1scale))
 
             event.code = "M"
             event.state = state
