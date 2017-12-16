@@ -1,6 +1,6 @@
-# Charizord
+# Thanos
 
-A amazing robot that will rock!
+Robot for UNIP Assis project!
 
 ## Require
 - `pip install inputs`
