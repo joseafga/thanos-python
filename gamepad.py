@@ -2,14 +2,18 @@
 
 import inputs
 
+inputs.EVENT_MAP = list(inputs.EVENT_MAP)
+inputs.EVENT_MAP[1] = ('type_codes', list((value, key) for key, value in inputs.EVENT_TYPES))
+inputs.EVENT_MAP = tuple(inputs.EVENT_MAP)
+
 
 class XboxController:
-    """ Xbox One Controller interface """
+    """ Xbox 360/One Controller interface """
     gamepad = None
 
     # def __init__(self):
     max_analog = 32768
-    max_trigger = 1023
+    max_trigger = None
     deadzone = 0.3 * max_analog
     prev = {
         "NIL": 0  # useless event
@@ -19,11 +23,20 @@ class XboxController:
     ndigits = 3
 
     def sync(self):
-        devices = inputs.DeviceManager()
-        self.gamepad = next((x for x in devices.gamepads if "Microsoft X-Box" in x.name), None)
+        # sarch new connected devices
+        inputs.devices = inputs.DeviceManager()
+
+        # chech if have Xbox gamepad
+        self.gamepad = next(
+            (x for x in inputs.devices.gamepads if 'Microsoft X-Box' in x.name),
+            None
+        )
 
         if self.gamepad is None:
             return False
+
+        # set trigger range if is a Xbox 360 or One controller
+        self.max_trigger = 255 if '360' in self.gamepad.name else 1023
 
         return True
 
