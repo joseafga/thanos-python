@@ -2,7 +2,7 @@
 
 Robot for UNIP Assis project!
 
-It read XBox 360 or One gamepad inputs, translate to PWM signal value and transmits via bluetooth communication.
+It read XBox 360 or One gamepad inputs, translate to PWM signal value and transmits via bluetooth communication.  
 For this project we used a [Arduino board with HC-06 module](https://github.com/joseafga/thanos-arduino) to receive signal and control motor using H-bridge.
 
 ## Require
@@ -14,7 +14,7 @@ For this project we used a [Arduino board with HC-06 module](https://github.com/
 - bluetooth adapter
 
 ## Install and Use
-Create a Python virtualenv install dependencies (see require) and active it.
+Create a Python virtualenv install dependencies (see require) and active it.  
 Make sure you bluetooth adapter is enable then run `main.py`:
 
     $ python main.py
