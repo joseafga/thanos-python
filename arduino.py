@@ -49,7 +49,7 @@ class Bluetooth:
     def rx(self):
         # read data from BT sock
         read = self.btsock.recv(2048)
-        print("In:", read)
+        # print("In:", read)
 
         return read
 
